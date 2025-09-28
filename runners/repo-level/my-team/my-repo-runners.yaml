@@ -1,0 +1,9 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerScaleSet
+metadata:
+  name: my-repo-runners
+spec:
+  repository: my-team/my-repo
+  labels: ["ubuntu-latest", "arc-repo"]
+  minRunners: 1
+  maxRunners: 3
