@@ -25,7 +25,7 @@ This document now contains two complementary case studies that illustrate an evo
 
 ### 🎯 **Executive Summary**
 
-This case study demonstrates how the combination of **GitHub Copilot (AI assistant)** and the `ghcr.io/tsviz/k8s-mcp` server transformed a complex GitHub Actions Runner Controller (ARC) troubleshooting session from a multi-tool, context-switching nightmare into a streamlined, IDE-integrated debugging experience. GitHub Copilot orchestrated Kubernetes inspections, log retrieval, manifest iteration, and Helm pivot recommendations through the MCP channel—reducing manual command typing while surfacing next-step reasoning inline. The MCP server provided structured, policy-aware access; GitHub Copilot provided adaptive guidance and narrative acceleration.
+This case study demonstrates how the combination of **[GitHub Copilot](https://github.com/features/copilot)** and the `ghcr.io/tsviz/k8s-mcp` server transformed a complex [GitHub Actions Runner Controller](https://docs.github.com/en/actions/concepts/runners/actions-runner-controller) (ARC) troubleshooting session from a multi-tool, context-switching nightmare into a streamlined, IDE-integrated debugging experience. GitHub Copilot orchestrated Kubernetes inspections, log retrieval, manifest iteration, and Helm pivot recommendations through the MCP channel—reducing manual command typing while surfacing next-step reasoning inline. The MCP server provided structured, policy-aware access; GitHub Copilot provided adaptive guidance and narrative acceleration.
 
 ---
 
