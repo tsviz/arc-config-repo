@@ -1,0 +1,154 @@
+name: Validate ARC Configuration
+
+on:
+  pull_request:
+    paths:
+      - 'runners/**/*.yaml'
+      - 'runners/**/*.yml'
+      - 'policies/**/*.yaml'
+      - 'policies/**/*.yml'
+      - 'templates/**/*.yaml'
+      - 'templates/**/*.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'runners/**/*.yaml'
+      - 'runners/**/*.yml'
+      - 'policies/**/*.yaml'
+      - 'policies/**/*.yml'
+      - 'templates/**/*.yaml'
+      - 'templates/**/*.yml'
+
+jobs:
+  validate:
+    name: Validate Configuration Files
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+    
+    - name: Install yq
+      run: |
+        sudo snap install yq
+        
+    - name: Make validation script executable
+      run: chmod +x scripts/validate-config.sh
+    
+    - name: Validate YAML syntax
+      run: |
+        echo "::group::YAML Syntax Validation"
+        scripts/validate-config.sh -v
+        echo "::endgroup::"
+    
+    - name: Check for template placeholders
+      run: |
+        echo "::group::Template Placeholder Check"
+        if find runners/ policies/ -name "*.yaml" -o -name "*.yml" | xargs grep -l "__.*__" | grep -v templates/; then
+          echo "::error::Found template placeholders in non-template files"
+          echo "The following files contain placeholders that should be replaced:"
+          find runners/ policies/ -name "*.yaml" -o -name "*.yml" | xargs grep -l "__.*__" | grep -v templates/
+          exit 1
+        else
+          echo "✅ No template placeholders found in configuration files"
+        fi
+        echo "::endgroup::"
+    
+    - name: Validate Kubernetes resources
+      run: |
+        echo "::group::Kubernetes Resource Validation"
+        # Create a temporary kubeconfig to avoid issues with dry-run validation
+        export KUBECONFIG=$(mktemp)
+        kubectl config set-cluster temp --server=https://127.0.0.1:6443
+        kubectl config set-context temp --cluster=temp
+        kubectl config use-context temp
+        
+        # Validate all YAML files
+        exit_code=0
+        for file in $(find runners/ policies/ -name "*.yaml" -o -name "*.yml"); do
+          echo "Validating $file..."
+          if ! kubectl apply --dry-run=client --validate=true -f "$file" 2>&1; then
+            echo "::error file=$file::Kubernetes validation failed"
+            exit_code=1
+          fi
+        done
+        
+        if [ $exit_code -eq 0 ]; then
+          echo "✅ All Kubernetes resources are valid"
+        fi
+        exit $exit_code
+        echo "::endgroup::"
+    
+    - name: Security check
+      run: |
+        echo "::group::Security Validation"
+        security_issues=0
+        
+        # Check for runAsNonRoot
+        echo "Checking for runAsNonRoot settings..."
+        if find runners/ policies/ -name "*.yaml" -o -name "*.yml" | xargs grep -l "runAsNonRoot: false"; then
+          echo "::warning::Found configurations with runAsNonRoot: false"
+          find runners/ policies/ -name "*.yaml" -o -name "*.yml" | xargs grep -l "runAsNonRoot: false"
+          security_issues=$((security_issues + 1))
+        fi
+        
+        # Check for missing securityContext
+        echo "Checking for missing securityContext..."
+        missing_security=0
+        for file in $(find runners/ -name "*.yaml" -o -name "*.yml"); do
+          if grep -q "kind: RunnerDeployment" "$file" && ! grep -q "securityContext:" "$file"; then
+            echo "::warning file=$file::Missing securityContext in RunnerDeployment"
+            missing_security=$((missing_security + 1))
+          fi
+        done
+        
+        # Check for resource limits
+        echo "Checking for resource limits..."
+        for file in $(find runners/ -name "*.yaml" -o -name "*.yml"); do
+          if grep -q "kind: RunnerDeployment" "$file" && grep -q "requests:" "$file" && ! grep -A 10 "resources:" "$file" | grep -q "limits:"; then
+            echo "::warning file=$file::Resource requests without limits"
+          fi
+        done
+        
+        echo "Security check completed"
+        echo "::endgroup::"
+    
+    - name: Lint YAML formatting
+      run: |
+        echo "::group::YAML Formatting"
+        
+        # Check for tabs
+        if find runners/ policies/ templates/ -name "*.yaml" -o -name "*.yml" | xargs grep -P '\t'; then
+          echo "::warning::Found files with tabs instead of spaces"
+        fi
+        
+        # Check for trailing whitespace
+        if find runners/ policies/ templates/ -name "*.yaml" -o -name "*.yml" | xargs grep -E ' +$'; then
+          echo "::warning::Found files with trailing whitespace"
+        fi
+        
+        echo "✅ YAML formatting check completed"
+        echo "::endgroup::"
+    
+    - name: Generate validation report
+      if: always()
+      run: |
+        echo "## ARC Configuration Validation Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Files Validated" >> $GITHUB_STEP_SUMMARY
+        echo "- **Total YAML files**: $(find runners/ policies/ templates/ -name "*.yaml" -o -name "*.yml" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Runner configurations**: $(find runners/ -name "*.yaml" -o -name "*.yml" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Policy configurations**: $(find policies/ -name "*.yaml" -o -name "*.yml" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "- **Templates**: $(find templates/ -name "*.yaml" -o -name "*.yml" | wc -l)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Validation Status" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "✅ All validations passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Some validations failed - check the logs above" >> $GITHUB_STEP_SUMMARY
+        fi

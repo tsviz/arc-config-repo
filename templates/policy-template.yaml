@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: __POLICY_NAME__
+  namespace: __NAMESPACE__
+data:
+  policy.yaml: |
+    # Runner policy template
+    # Replace placeholders with actual values for your use case
+    
+    # Resource configuration
+    resources:
+      requests:
+        cpu: "__CPU_REQUEST__"
+        memory: "__MEMORY_REQUEST__"
+      limits:
+        cpu: "__CPU_LIMIT__"
+        memory: "__MEMORY_LIMIT__"
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: __RUN_AS_NON_ROOT__
+      runAsUser: __USER_ID__
+      fsGroup: __GROUP_ID__
+      seccompProfile:
+        type: __SECCOMP_TYPE__
+      capabilities:
+        drop: __CAPABILITIES_TO_DROP__
+    
+    # Network policy settings
+    networkPolicy:
+      enabled: __NETWORK_POLICY_ENABLED__
+      ingress: __INGRESS_RULES__
+      egress: __EGRESS_RULES__
+    
+    # Node placement
+    nodeSelector:
+      __NODE_SELECTOR_KEY__: __NODE_SELECTOR_VALUE__
+    
+    nodeAffinity:
+      __AFFINITY_TYPE__:
+      - weight: __WEIGHT__
+        preference:
+          matchExpressions:
+          - key: __AFFINITY_KEY__
+            operator: __OPERATOR__
+            values: __VALUES__
+    
+    # Tolerations
+    tolerations:
+    - key: "__TOLERATION_KEY__"
+      operator: "__OPERATOR__"
+      value: "__TOLERATION_VALUE__"
+      effect: "__EFFECT__"
+    
+    # Environment variables
+    env:
+    - name: __ENV_NAME__
+      value: __ENV_VALUE__
+    
+    # Volume configuration
+    volumes:
+    - name: __VOLUME_NAME__
+      __VOLUME_TYPE__:
+        __VOLUME_SPEC__
+    
+    volumeMounts:
+    - name: __VOLUME_NAME__
+      mountPath: __MOUNT_PATH__
+      readOnly: __READ_ONLY__

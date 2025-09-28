@@ -1,0 +1,77 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: __RUNNER_NAME__
+  namespace: __NAMESPACE__
+spec:
+  replicas: __REPLICA_COUNT__
+  template:
+    spec:
+      repository: __REPOSITORY__
+      # For organization runners, use:
+      # organization: __ORGANIZATION__
+      
+      # Runner image configuration
+      image: summerwind/actions-runner:latest
+      imagePullPolicy: Always
+      
+      # Resource configuration
+      resources:
+        requests:
+          cpu: __CPU_REQUEST__
+          memory: __MEMORY_REQUEST__
+        limits:
+          cpu: __CPU_LIMIT__
+          memory: __MEMORY_LIMIT__
+      
+      # Node selection
+      nodeSelector:
+        __NODE_SELECTOR_KEY__: __NODE_SELECTOR_VALUE__
+      
+      # Tolerations for dedicated nodes
+      tolerations:
+      - key: __TOLERATION_KEY__
+        operator: Equal
+        value: __TOLERATION_VALUE__
+        effect: NoSchedule
+      
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      
+      # Environment variables
+      env:
+      - name: __ENV_VAR_NAME__
+        value: __ENV_VAR_VALUE__
+      
+      # Volumes (optional)
+      volumes:
+      - name: __VOLUME_NAME__
+        __VOLUME_TYPE__:
+          __VOLUME_CONFIG__
+      
+      volumeMounts:
+      - name: __VOLUME_NAME__
+        mountPath: __MOUNT_PATH__
+
+---
+# Optional: HorizontalRunnerAutoscaler for dynamic scaling
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: HorizontalRunnerAutoscaler
+metadata:
+  name: __RUNNER_NAME__-hra
+  namespace: __NAMESPACE__
+spec:
+  scaleTargetRef:
+    name: __RUNNER_NAME__
+  minReplicas: __MIN_REPLICAS__
+  maxReplicas: __MAX_REPLICAS__
+  # Scale based on GitHub webhook events
+  scaleDownDelaySecondsAfterScaleOut: 300
+  scaleUpTriggers:
+  - githubEvent:
+      workflowJob: {}
+    amount: 1
+    duration: "10m"

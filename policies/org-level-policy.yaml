@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: arc-org-runner-policy
+  namespace: arc-systems
+data:
+  policy.yaml: |
+    # Organization-level runner policy for ARC
+    # This policy applies to all runners in the organization
+    
+    # Resource limits
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+    
+    # Security context
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+      fsGroup: 1001
+      seccompProfile:
+        type: RuntimeDefault
+      capabilities:
+        drop:
+        - ALL
+    
+    # Network policies
+    networkPolicy:
+      enabled: true
+      ingress:
+        - from:
+          - namespaceSelector:
+              matchLabels:
+                name: arc-systems
+      egress:
+        - to: []
+          ports:
+          - protocol: TCP
+            port: 443
+          - protocol: TCP
+            port: 80
+    
+    # Node affinity - prefer dedicated runner nodes
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+          - key: node-type
+            operator: In
+            values:
+            - runner
+    
+    # Tolerations for dedicated runner nodes
+    tolerations:
+    - key: "runner-node"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"

@@ -1,0 +1,66 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerDeployment
+metadata:
+  name: another-repo-runners
+  namespace: my-team
+spec:
+  replicas: 2
+  template:
+    spec:
+      repository: my-org/another-repo
+      image: summerwind/actions-runner:latest
+      imagePullPolicy: Always
+      
+      # Resource configuration optimized for lighter workloads
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "200Mi"
+        limits:
+          cpu: "1"
+          memory: "2Gi"
+      
+      # Security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      
+      # Node placement for cost-effective nodes
+      nodeSelector:
+        instance-type: "standard"
+      
+      # Tolerate general runner nodes
+      tolerations:
+      - key: "runner-node"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+      
+      # Environment specific to this repository
+      env:
+      - name: REPO_NAME
+        value: "another-repo"
+      - name: BUILD_TYPE
+        value: "lightweight"
+
+---
+# Auto-scaler for this runner set
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: HorizontalRunnerAutoscaler
+metadata:
+  name: another-repo-runners-hra
+  namespace: my-team
+spec:
+  scaleTargetRef:
+    name: another-repo-runners
+  minReplicas: 1
+  maxReplicas: 5
+  scaleDownDelaySecondsAfterScaleOut: 180  # Faster scale-down for lightweight jobs
+  scaleUpTriggers:
+  - githubEvent:
+      workflowJob: {}
+    amount: 1
+    duration: "5m"
