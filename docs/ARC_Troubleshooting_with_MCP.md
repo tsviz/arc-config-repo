@@ -33,7 +33,7 @@ The troubleshooting session leveraged this MCP server configuration:
     "args": [
       "run", "-i", "--rm",
       "-v", "/Users/tsvi/.kube:/home/mcp/.kube:ro",
-      "-v", "/Users/tsvi/git_projects/octodemo/java-springboot-demo/config-policies/dev-policy.json:/app/dev-policy.json:ro",
+      "-v", "/Users/tsvi/path/to/config-policies/dev-policy.json:/app/dev-policy.json:ro",
       "-e", "POLICY_CONFIG_PATH=/app/dev-policy.json",
       "-e", "READ_ONLY=true",
       "ghcr.io/tsviz/k8s-mcp:v1.4"
