@@ -1,0 +1,9 @@
+apiVersion: actions.summerwind.dev/v1alpha1
+kind: RunnerScaleSet
+metadata:
+  name: arc-org-runners
+spec:
+  organization: tsviz-demo-org
+  labels: ["ubuntu-latest", "arc-org"]
+  minRunners: 2
+  maxRunners: 10
