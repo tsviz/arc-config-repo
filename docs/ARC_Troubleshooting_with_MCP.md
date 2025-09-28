@@ -18,6 +18,100 @@ This document now contains two complementary case studies that illustrate an evo
 - [Case Study 1: Streamlined Kubernetes Debugging Through MCP Integration](#case-study-1-streamlined-kubernetes-debugging-through-mcp-integration)
 - [Case Study 2: Continuous Compliance & Operational Health Analysis with k8s-mcp](#case-study-2-continuous-compliance--operational-health-analysis-with-k8s-mcp)
 - [GitHub Copilot + k8s-mcp Synergy & ROI](#github-copilot--k8s-mcp-synergy--roi)
+ - [MCP Configuration Profiles](#mcp-configuration-profiles)
+
+---
+
+## MCP Configuration Profiles
+
+To eliminate repetition, all canonical `k8s-mcp` server invocation examples live here. Case studies now reference these profiles.
+
+### Environment Variable Reference
+| Variable | Purpose | Typical Values |
+|----------|---------|----------------|
+| `READ_ONLY` | Prevent mutating operations when `true` | `true` / `false` |
+| `POLICY_CONFIG_PATH` | JSON policy file path inside container | `/app/dev-policy.json` |
+| `KUBECONFIG` (implicit via mount) | Cluster auth context | Mounted from host `$HOME/.kube` |
+
+### Volume & Path Notes
+| Mount | Mode | Reason |
+|-------|------|--------|
+| `${HOME}/.kube:/home/mcp/.kube:ro` | ro | Provide kubeconfig without write risk |
+| `./policies/*.json:/app/*.json:ro` | ro | Inject policy definitions |
+
+<details><summary><strong>Profile 1: Quick Read-Only (Discovery)</strong></summary>
+
+```json
+{
+  "k8s-deployment-server": {
+    "command": "docker",
+    "args": [
+      "run", "-i", "--rm",
+      "-v", "${HOME}/.kube:/home/mcp/.kube:ro",
+      "-e", "READ_ONLY=true",
+      "ghcr.io/tsviz/k8s-mcp:latest"
+    ],
+    "type": "stdio"
+  }
+}
+```
+
+Use when exploring cluster state safely (no mutations allowed).
+
+</details>
+
+<details><summary><strong>Profile 2: Policy-Enforced Read-Only</strong></summary>
+
+```json
+{
+  "k8s-deployment-server": {
+    "command": "docker",
+    "args": [
+      "run", "-i", "--rm",
+      "-v", "${HOME}/.kube:/home/mcp/.kube:ro",
+      "-v", "./policies/dev-policy.json:/app/dev-policy.json:ro",
+      "-e", "POLICY_CONFIG_PATH=/app/dev-policy.json",
+      "-e", "READ_ONLY=true",
+      "ghcr.io/tsviz/k8s-mcp:v1.4"
+    ],
+    "type": "stdio"
+  }
+}
+```
+
+Adds governance signals (evaluation only) while still ensuring safety.
+
+</details>
+
+<details><summary><strong>Profile 3: Write-Enabled Hardening (Controlled)</strong></summary>
+
+```json
+{
+  "k8s-deployment-server": {
+    "command": "docker",
+    "args": [
+      "run", "-i", "--rm",
+      "-v", "${HOME}/.kube:/home/mcp/.kube:ro",
+      "-v", "./policies/dev-policy.json:/app/dev-policy.json:ro",
+      "-e", "POLICY_CONFIG_PATH=/app/dev-policy.json",
+      "-e", "READ_ONLY=false",
+      "ghcr.io/tsviz/k8s-mcp:v1.4"
+    ],
+    "type": "stdio"
+  }
+}
+```
+
+Enable only after: (1) baseline captured, (2) changes peer-reviewed, (3) audit trail strategy agreed.
+
+Security suggestions:
+1. Pin image by digest for immutability.
+2. Use a dedicated kubeconfig context with least privileges.
+3. Gate write-mode behind local developer policy approval (pre-commit hook or config PR review).
+
+</details>
+
+> NOTE: The earlier repeated configuration snippets inside case studies have been replaced with references to these profiles for maintainability.
 
 ---
 
@@ -43,32 +137,9 @@ This case study demonstrates how the combination of **[GitHub Copilot](https://g
 
 ---
 
-## 🔧 **MCP Server Configuration**
+## 🔧 **MCP Server Configuration (Reference)**
 
-The troubleshooting session leveraged this MCP server configuration:
-
-```json
-{
-  "k8s-deployment-server": {
-    "command": "docker",
-    "args": [
-      "run", "-i", "--rm",
-      "-v", "/Users/tsvi/.kube:/home/mcp/.kube:ro",
-      "-v", "/Users/tsvi/path/to/config-policies/dev-policy.json:/app/dev-policy.json:ro",
-      "-e", "POLICY_CONFIG_PATH=/app/dev-policy.json",
-      "-e", "READ_ONLY=true",
-      "ghcr.io/tsviz/k8s-mcp:v1.4"
-    ],
-    "type": "stdio"
-  }
-}
-```
-
-**Key Features**:
-- 🔒 **Security**: Read-only mode with policy enforcement
-- 🔑 **Authentication**: Automatic kubeconfig mounting
-- 📋 **Compliance**: Policy-based operations
-- 🐳 **Portability**: Containerized, no local setup required
+See [MCP Configuration Profiles](#mcp-configuration-profiles) for canonical invocation examples. Case Study 1 used Profile 2 (Policy-Enforced Read-Only) during initial diagnosis.
 
 ---
 
@@ -372,39 +443,15 @@ helm install arc-repo-runners oci://ghcr.io/actions/actions-runner-controller-ch
 
 ## 🚀 **Getting Started with k8s-mcp**
 
-### **Basic Configuration**
-```json
-{
-  "k8s-deployment-server": {
-    "command": "docker",
-    "args": [
-      "run", "-i", "--rm",
-      "-v", "${HOME}/.kube:/home/mcp/.kube:ro",
-      "-e", "READ_ONLY=true",
-      "ghcr.io/tsviz/k8s-mcp:latest"
-    ],
-    "type": "stdio"
-  }
-}
-```
+Reference the curated [MCP Configuration Profiles](#mcp-configuration-profiles). Choose:
 
-### **Advanced Configuration with Policies**
-```json
-{
-  "k8s-deployment-server": {
-    "command": "docker", 
-    "args": [
-      "run", "-i", "--rm",
-      "-v", "${HOME}/.kube:/home/mcp/.kube:ro",
-      "-v", "./policies/dev-policy.json:/app/policy.json:ro",
-      "-e", "POLICY_CONFIG_PATH=/app/policy.json",
-      "-e", "READ_ONLY=false",
-      "ghcr.io/tsviz/k8s-mcp:v1.4"
-    ],
-    "type": "stdio"
-  }
-}
-```
+| Use Case | Recommended Profile |
+|----------|---------------------|
+| First-time safe exploration | Profile 1 |
+| Policy baseline & compliance scan | Profile 2 |
+| Applying non-root / label / registry fixes | Profile 3 |
+
+For enterprise hardening, fork Profile 3 and: (a) pin images by digest, (b) restrict kubeconfig to a least-privilege service account, (c) add network egress controls around the container runtime.
 
 ---
 
