@@ -1,4 +1,4 @@
-# GitHub Actions Runner Controller (ARC) Troubleshooting with k8s-mcp Server
+# GitHub Actions Runner Controller (ARC) Troubleshooting with [k8s-mcp Server](https://github.com/tsviz/k8s-mcp)
 
 ## Case Study: Streamlined Kubernetes Debugging Through MCP Integration
 
