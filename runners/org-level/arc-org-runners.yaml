@@ -1,9 +1,17 @@
-apiVersion: actions.summerwind.dev/v1alpha1
-kind: RunnerScaleSet
+apiVersion: actions.github.com/v1alpha1
+kind: AutoscalingRunnerSet
 metadata:
   name: arc-org-runners
+  namespace: arc-systems
+  annotations:
+    actions.github.com/version: "0.12.1"
 spec:
-  organization: tsviz-demo-org
-  labels: ["ubuntu-latest", "arc-org"]
-  minRunners: 2
+  githubConfigUrl: "https://github.com/tsviz"
+  githubConfigSecret: "github-token"
   maxRunners: 10
+  minRunners: 2
+  template:
+    spec:
+      containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:latest

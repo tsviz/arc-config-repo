@@ -1,9 +1,23 @@
-apiVersion: actions.summerwind.dev/v1alpha1
-kind: RunnerScaleSet
+apiVersion: actions.github.com/v1alpha1
+kind: AutoscalingRunnerSet
 metadata:
   name: my-repo-runners
+  namespace: arc-systems
 spec:
-  repository: my-team/my-repo
-  labels: ["ubuntu-latest", "arc-repo"]
-  minRunners: 1
+  githubConfigUrl: "https://github.com/tsviz/arc-config-repo"
+  githubConfigSecret: "github-token"
   maxRunners: 3
+  minRunners: 1
+  runnerGroup: "default"
+  template:
+    spec:
+      containers:
+      - name: runner
+        image: ghcr.io/actions/actions-runner:latest
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "250m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
