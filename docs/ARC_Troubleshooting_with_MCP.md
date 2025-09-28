@@ -1,6 +1,26 @@
 # GitHub Actions Runner Controller (ARC) Troubleshooting with [k8s-mcp Server](https://github.com/tsviz/k8s-mcp)
 
-## Case Study: Streamlined Kubernetes Debugging Through MCP Integration
+## Overview
+
+This document now contains two complementary case studies that illustrate an evolutionary journey:
+
+| Case Study | Focus | Primary Theme | Outcome |
+|------------|-------|---------------|---------|
+| 1 | First-contact troubleshooting | Functional recovery & speed | Runners operational with 75% faster MTTR |
+| 2 | Post-recovery posture management | Compliance, security, governance | Baseline compliance (66.67%) + hardening roadmap |
+
+### Why Two Case Studies?
+1. Show progression: from reactive debugging → proactive governance.
+2. Demonstrate breadth of the MCP server: lifecycle support (setup, diagnosis, compliance, optimization).
+3. Provide reusable patterns: Helm pivot, policy evaluation, remediation planning.
+
+### Table of Contents
+- [Case Study 1: Streamlined Kubernetes Debugging Through MCP Integration](#case-study-1-streamlined-kubernetes-debugging-through-mcp-integration)
+- [Case Study 2: Continuous Compliance & Operational Health Analysis with k8s-mcp](#case-study-2-continuous-compliance--operational-health-analysis-with-k8s-mcp)
+
+---
+
+## Case Study 1: Streamlined Kubernetes Debugging Through MCP Integration
 
 ### 🎯 **Executive Summary**
 
