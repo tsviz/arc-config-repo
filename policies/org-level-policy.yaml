@@ -7,7 +7,7 @@ data:
   policy.yaml: |
     # Organization-level runner policy for ARC
     # This policy applies to all runners in the organization
-    
+
     # Resource limits
     resources:
       requests:
@@ -16,7 +16,7 @@ data:
       limits:
         cpu: "2"
         memory: "4Gi"
-    
+
     # Security context
     securityContext:
       runAsNonRoot: true
@@ -27,7 +27,7 @@ data:
       capabilities:
         drop:
         - ALL
-    
+
     # Network policies
     networkPolicy:
       enabled: true
@@ -43,7 +43,7 @@ data:
             port: 443
           - protocol: TCP
             port: 80
-    
+
     # Node affinity - prefer dedicated runner nodes
     nodeAffinity:
       preferredDuringSchedulingIgnoredDuringExecution:
@@ -54,7 +54,7 @@ data:
             operator: In
             values:
             - runner
-    
+
     # Tolerations for dedicated runner nodes
     tolerations:
     - key: "runner-node"

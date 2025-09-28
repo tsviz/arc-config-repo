@@ -10,11 +10,11 @@ spec:
       repository: __REPOSITORY__
       # For organization runners, use:
       # organization: __ORGANIZATION__
-      
+
       # Runner image configuration
       image: summerwind/actions-runner:latest
       imagePullPolicy: Always
-      
+
       # Resource configuration
       resources:
         requests:
@@ -23,35 +23,35 @@ spec:
         limits:
           cpu: __CPU_LIMIT__
           memory: __MEMORY_LIMIT__
-      
+
       # Node selection
       nodeSelector:
         __NODE_SELECTOR_KEY__: __NODE_SELECTOR_VALUE__
-      
+
       # Tolerations for dedicated nodes
       tolerations:
       - key: __TOLERATION_KEY__
         operator: Equal
         value: __TOLERATION_VALUE__
         effect: NoSchedule
-      
+
       # Security context
       securityContext:
         runAsNonRoot: true
         runAsUser: 1001
         fsGroup: 1001
-      
+
       # Environment variables
       env:
       - name: __ENV_VAR_NAME__
         value: __ENV_VAR_VALUE__
-      
+
       # Volumes (optional)
       volumes:
       - name: __VOLUME_NAME__
         __VOLUME_TYPE__:
           __VOLUME_CONFIG__
-      
+
       volumeMounts:
       - name: __VOLUME_NAME__
         mountPath: __MOUNT_PATH__

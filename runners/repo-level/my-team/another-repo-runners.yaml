@@ -10,7 +10,7 @@ spec:
       repository: my-org/another-repo
       image: summerwind/actions-runner:latest
       imagePullPolicy: Always
-      
+
       # Resource configuration optimized for lighter workloads
       resources:
         requests:
@@ -19,7 +19,7 @@ spec:
         limits:
           cpu: "1"
           memory: "2Gi"
-      
+
       # Security context
       securityContext:
         runAsNonRoot: true
@@ -27,18 +27,18 @@ spec:
         fsGroup: 1001
         seccompProfile:
           type: RuntimeDefault
-      
+
       # Node placement for cost-effective nodes
       nodeSelector:
         instance-type: "standard"
-      
+
       # Tolerate general runner nodes
       tolerations:
       - key: "runner-node"
         operator: "Equal"
         value: "true"
         effect: "NoSchedule"
-      
+
       # Environment specific to this repository
       env:
       - name: REPO_NAME

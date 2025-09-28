@@ -7,7 +7,7 @@ data:
   policy.yaml: |
     # Repository-specific runner policy for my-repo
     # This policy overrides org-level settings for this specific repository
-    
+
     # Higher resource limits for intensive builds
     resources:
       requests:
@@ -16,7 +16,7 @@ data:
       limits:
         cpu: "4"
         memory: "8Gi"
-    
+
     # Security context (inherits from org policy)
     securityContext:
       runAsNonRoot: true
@@ -24,24 +24,24 @@ data:
       fsGroup: 1001
       seccompProfile:
         type: RuntimeDefault
-    
+
     # Additional environment variables for this repo
     env:
     - name: REPO_SPECIFIC_VAR
       value: "my-repo-value"
     - name: BUILD_CACHE_ENABLED
       value: "true"
-    
+
     # Repo-specific volumes for caching
     volumes:
     - name: build-cache
       persistentVolumeClaim:
         claimName: my-repo-build-cache
-    
+
     volumeMounts:
     - name: build-cache
       mountPath: /build-cache
-    
+
     # Node selector for high-performance nodes
     nodeSelector:
       instance-type: "high-cpu"

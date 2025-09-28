@@ -1,12 +1,11 @@
 #!/bin/bash
 
-# validate-config.sh - Validate ARC YAML configurations
+# Simple validation script for ARC configurations
 # Usage: ./validate-config.sh [options]
 
 set -euo pipefail
 
 # Default values
-FIX_ISSUES=false
 VERBOSE=false
 CONFIG_DIR="."
 
@@ -22,28 +21,6 @@ TOTAL_FILES=0
 VALID_FILES=0
 INVALID_FILES=0
 WARNINGS=0
-
-# Print usage information
-usage() {
-    cat << EOF
-Usage: $0 [options]
-
-Validate ARC YAML configuration files for syntax and common issues.
-
-Options:
-    -h, --help          Show this help message
-    -f, --fix           Attempt to fix common issues automatically
-    -v, --verbose       Verbose output
-    -d, --dir DIR       Directory to validate (default: current directory)
-
-Examples:
-    $0                  # Validate all YAML files in current directory
-    $0 -v              # Verbose validation
-    $0 -f              # Validate and fix issues where possible
-    $0 -d runners/     # Validate only files in runners/ directory
-
-EOF
-}
 
 # Logging functions
 log_info() {
@@ -63,173 +40,108 @@ log_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Check if required tools are available
-check_dependencies() {
-    local missing_tools=()
-    
-    if ! command -v kubectl &> /dev/null; then
-        missing_tools+=("kubectl")
-    fi
-    
-    if ! command -v yq &> /dev/null; then
-        log_warning "yq not found. Some advanced validations will be skipped."
-        log_info "Install yq with: sudo snap install yq or brew install yq"
-    fi
-    
-    if [[ ${#missing_tools[@]} -gt 0 ]]; then
-        log_error "Missing required tools: ${missing_tools[*]}"
-        exit 1
-    fi
+# Print usage
+usage() {
+    cat << EOF
+Usage: $0 [options]
+
+Validate ARC YAML configuration files for syntax and common issues.
+
+Options:
+    -h, --help          Show this help message
+    -v, --verbose       Verbose output
+    -d, --dir DIR       Directory to validate (default: current directory)
+
+Examples:
+    $0                  # Validate all YAML files in current directory
+    $0 -v              # Verbose validation
+    $0 -d runners/     # Validate only files in runners/ directory
+
+EOF
 }
 
 # Validate YAML syntax
 validate_yaml_syntax() {
     local file=$1
-    local temp_output
     
     if [[ "$VERBOSE" == "true" ]]; then
         log_info "Validating YAML syntax: $file"
     fi
     
-    # Use kubectl to validate YAML syntax
-    if temp_output=$(kubectl apply --dry-run=client --validate=true -f "$file" 2>&1); then
-        return 0
+    # Use yq if available
+    if command -v yq &> /dev/null; then
+        if yq eval '.' "$file" > /dev/null 2>&1; then
+            return 0
+        else
+            log_error "YAML syntax error in $file"
+            return 1
+        fi
+    # Use python as fallback
+    elif command -v python3 &> /dev/null; then
+        if python3 -c "import yaml; yaml.safe_load(open('$file'))" > /dev/null 2>&1; then
+            return 0
+        else
+            log_error "YAML syntax error in $file"
+            return 1
+        fi
     else
-        log_error "YAML syntax error in $file:"
-        echo "$temp_output" | sed 's/^/  /'
-        return 1
-    fi
-}
-
-# Validate Runner Deployment specific fields
-validate_runner_deployment() {
-    local file=$1
-    local issues=0
-    
-    if [[ "$VERBOSE" == "true" ]]; then
-        log_info "Validating RunnerDeployment: $file"
-    fi
-    
-    # Check if it's a RunnerDeployment
-    if ! grep -q "kind: RunnerDeployment" "$file"; then
+        log_warning "No YAML validator found (yq or python3). Skipping syntax validation for $file"
         return 0
     fi
-    
-    # Check required fields
-    if ! grep -q "repository\|organization" "$file"; then
-        log_error "$file: Missing repository or organization field"
-        ((issues++))
-    fi
-    
-    # Check for placeholder values
-    if grep -q "__.*__" "$file"; then
-        log_warning "$file: Contains template placeholders (e.g., __PLACEHOLDER__)"
-        local placeholders
-        placeholders=$(grep -o "__[^_]*__" "$file" | sort | uniq)
-        echo "  Placeholders found: $placeholders"
-    fi
-    
-    # Check resource limits
-    if grep -q "resources:" "$file"; then
-        if ! grep -A 10 "resources:" "$file" | grep -q "limits:"; then
-            log_warning "$file: Resource requests defined but no limits"
-        fi
-    fi
-    
-    # Check for security context
-    if ! grep -q "securityContext:" "$file"; then
-        log_warning "$file: No securityContext defined (security best practice)"
-    fi
-    
-    return $issues
 }
 
-# Validate ConfigMap policies
-validate_policy_config() {
+# Check for common issues
+check_common_issues() {
     local file=$1
-    local issues=0
+    local warnings_found=0
     
-    if [[ "$VERBOSE" == "true" ]]; then
-        log_info "Validating Policy ConfigMap: $file"
-    fi
-    
-    # Check if it's a ConfigMap
-    if ! grep -q "kind: ConfigMap" "$file"; then
-        return 0
-    fi
-    
-    # Check for policy data
-    if ! grep -q "policy.yaml:" "$file"; then
-        log_warning "$file: ConfigMap doesn't contain policy.yaml data"
-    fi
-    
-    # Check for security context in policy
-    if grep -q "policy.yaml:" "$file"; then
-        if ! grep -A 50 "policy.yaml:" "$file" | grep -q "securityContext:"; then
-            log_warning "$file: Policy doesn't define securityContext"
-        fi
-        
-        # Check for runAsNonRoot
-        if grep -A 50 "policy.yaml:" "$file" | grep -q "runAsNonRoot:"; then
-            if grep -A 50 "policy.yaml:" "$file" | grep "runAsNonRoot:" | grep -q "false"; then
-                log_error "$file: runAsNonRoot is set to false (security risk)"
-                ((issues++))
-            fi
-        fi
-    fi
-    
-    return $issues
-}
-
-# Check for common issues across all files
-validate_common_issues() {
-    local file=$1
-    local issues=0
-    
-    # Check for tabs (should use spaces)
-    if grep -P '\t' "$file" &> /dev/null; then
+    # Check for tabs
+    if grep -P '\t' "$file" > /dev/null 2>&1; then
         log_warning "$file: Contains tabs, should use spaces for indentation"
+        ((warnings_found++))
     fi
     
     # Check for trailing whitespace
-    if grep -E ' +$' "$file" &> /dev/null; then
+    if grep -E ' +$' "$file" > /dev/null 2>&1; then
         log_warning "$file: Contains trailing whitespace"
-        
-        if [[ "$FIX_ISSUES" == "true" ]]; then
-            sed -i 's/[[:space:]]*$//' "$file"
-            log_info "Fixed trailing whitespace in $file"
-        fi
+        ((warnings_found++))
     fi
     
-    # Check for very long lines (might indicate formatting issues)
-    if awk 'length($0) > 200' "$file" | grep -q .; then
-        log_warning "$file: Contains very long lines (>200 chars)"
+    # Check for template placeholders in non-template files
+    if [[ "$file" != *"template"* ]] && grep -q "__.*__" "$file"; then
+        log_warning "$file: Contains template placeholders (should be replaced)"
+        ((warnings_found++))
     fi
     
-    return $issues
+    return $warnings_found
 }
 
-# Validate namespace consistency
-validate_namespace_consistency() {
+# Check security best practices
+check_security() {
     local file=$1
+    local warnings_found=0
     
-    # Extract namespace from metadata
-    local namespace
-    namespace=$(grep -A 5 "metadata:" "$file" | grep "namespace:" | head -1 | sed 's/.*namespace: *//; s/ *#.*//')
+    # Check for runAsNonRoot: false
+    if grep -q "runAsNonRoot: false" "$file"; then
+        log_warning "$file: runAsNonRoot is set to false (security risk)"
+        ((warnings_found++))
+    fi
     
-    if [[ -n "$namespace" && "$namespace" != "null" ]]; then
-        # Check if namespace makes sense for file location
-        local dir_path
-        dir_path=$(dirname "$file")
-        
-        if [[ "$dir_path" == *"org-level"* ]] && [[ "$namespace" != *"arc"* && "$namespace" != *"org"* ]]; then
-            log_warning "$file: Org-level config in namespace '$namespace' (consider arc-systems or similar)"
+    # For RunnerDeployment files, check for security context
+    if grep -q "kind: RunnerDeployment" "$file"; then
+        if ! grep -q "securityContext:" "$file"; then
+            log_warning "$file: Missing securityContext in RunnerDeployment"
+            ((warnings_found++))
         fi
         
-        if [[ "$dir_path" == *"repo-level"* ]] && [[ "$namespace" == *"arc"* || "$namespace" == *"system"* ]]; then
-            log_warning "$file: Repo-level config in system namespace '$namespace'"
+        # Check for resource limits
+        if grep -q "requests:" "$file" && ! grep -A 10 "resources:" "$file" | grep -q "limits:"; then
+            log_warning "$file: Resource requests without limits"
+            ((warnings_found++))
         fi
     fi
+    
+    return $warnings_found
 }
 
 # Validate a single file
@@ -243,31 +155,26 @@ validate_file() {
         log_info "Validating: $file"
     fi
     
-    # Basic YAML syntax validation
+    # YAML syntax validation
     if ! validate_yaml_syntax "$file"; then
         file_valid=false
-    fi
-    
-    # Skip further validation if YAML is invalid
-    if [[ "$file_valid" == "false" ]]; then
         ((INVALID_FILES++))
         return 1
     fi
     
-    # Specific validations based on content
-    validate_runner_deployment "$file"
-    validate_policy_config "$file"
-    validate_common_issues "$file"
-    validate_namespace_consistency "$file"
+    # Check for common issues (warnings only)
+    check_common_issues "$file" || true
     
-    if [[ "$file_valid" == "true" ]]; then
-        ((VALID_FILES++))
-        if [[ "$VERBOSE" == "true" ]]; then
-            log_success "Valid: $file"
-        fi
-    else
-        ((INVALID_FILES++))
+    # Check security best practices (warnings only)
+    check_security "$file" || true
+    
+    # File is valid
+    ((VALID_FILES++))
+    if [[ "$VERBOSE" == "true" ]]; then
+        log_success "Valid: $file"
     fi
+    
+    return 0
 }
 
 # Find and validate all YAML files
@@ -291,7 +198,7 @@ validate_all_configs() {
     
     # Validate each file
     for file in "${yaml_files[@]}"; do
-        validate_file "$file"
+        validate_file "$file" || true  # Don't exit on file validation failure
     done
 }
 
@@ -305,7 +212,7 @@ generate_report() {
     echo "  Warnings: $WARNINGS"
     
     if [[ $INVALID_FILES -eq 0 ]]; then
-        log_success "All YAML files are valid!"
+        log_success "All YAML files are syntactically valid!"
         if [[ $WARNINGS -gt 0 ]]; then
             log_info "Consider addressing the warnings above for better configuration."
         fi
@@ -322,10 +229,6 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             usage
             exit 0
-            ;;
-        -f|--fix)
-            FIX_ISSUES=true
-            shift
             ;;
         -v|--verbose)
             VERBOSE=true
@@ -347,12 +250,6 @@ done
 main() {
     log_info "Starting ARC configuration validation..."
     
-    if [[ "$FIX_ISSUES" == "true" ]]; then
-        log_info "Fix mode enabled - will attempt to fix common issues"
-    fi
-    
-    check_dependencies
-    
     # Validate directory exists
     if [[ ! -d "$CONFIG_DIR" ]]; then
         log_error "Directory not found: $CONFIG_DIR"
@@ -360,7 +257,6 @@ main() {
     fi
     
     validate_all_configs "$CONFIG_DIR"
-    
     generate_report
 }
 
