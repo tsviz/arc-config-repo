@@ -48,3 +48,4 @@ This repository demonstrates:
 - CI/CD integration for configuration management
 
 Feel free to use and adapt these samples for your own ARC setup. See the `docs/` folder for detailed guidance.
+# Documentation updated: Sun Sep 28 18:07:53 UTC 2025
