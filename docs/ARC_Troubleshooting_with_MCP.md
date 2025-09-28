@@ -412,3 +412,202 @@ This case study demonstrates how MCP servers can revolutionize DevOps workflows 
 *Case Study Date: September 28, 2025*  
 *MCP Server Version: v1.4*  
 *ARC Controller Version: 0.12.1*
+
+---
+
+## Case Study 2: Continuous Compliance & Operational Health Analysis with k8s-mcp
+
+### 🎯 Executive Snapshot
+
+After restoring functional ARC runners (Case Study 1), the next objective shifted from “make it work” to “make it compliant, observable, and maintainable.” This second case study captures how the same `k8s-mcp` server accelerated a deep-dive cluster posture assessment—surface health, controller behavior, security/compliance gaps, and actionable remediation planning—without leaving the IDE.
+
+### 🧭 Objective
+
+Move beyond initial troubleshooting to:
+- Assess security & compliance posture of ARC components.
+- Enumerate operational integrity (deployments, namespaces, lifecycle logs).
+- Identify policy violations and prioritize remediation.
+- Demonstrate iterative improvement workflow (read-only → planned write-enabled hardening).
+
+### 🌐 Environment Context
+
+| Layer | Detail |
+|-------|--------|
+| Kubernetes | Docker Desktop cluster |
+| Namespace | `arc-systems` |
+| ARC Controller | `gha-runner-scale-set-controller:0.12.1` (Helm managed) |
+| Runner Scale Set | `arc-repo-runners` (min=1, max=5) |
+| Runner Image | `ghcr.io/actions/actions-runner:latest` |
+| MCP Server Mode | Read-only (`READ_ONLY=true`) with policy config |
+| Compliance Policy | Custom dev policy JSON (enforced) |
+
+### 🔍 Investigation Timeline (MCP-Orchestrated)
+
+| Phase | Action (via MCP) | Outcome |
+|-------|------------------|---------|
+| 1 | List namespaces & deployments | Baseline cluster inventory confirmed |
+| 2 | Retrieve ARC controller & runner pod statuses | All pods healthy; steady-state scaling at minimum |
+| 3 | Pull controller logs | Verified successful runner registration & lifecycle transitions |
+| 4 | Evaluate deployment policies | 9 rules evaluated; 3 failed (2 high severity) |
+| 5 | Generate compliance report | Overall compliance score: 66.67% |
+| 6 | List security policy rules | Auto-fix available for all security rules (blocked by read-only) |
+| 7 | Attempt auto-fix (dry) | Prevented (READ_ONLY) → validated safeguard behavior |
+| 8 | Suggest policy customizations | Received JSON snippet for advisory tuning |
+
+### 📊 Compliance & Security Posture Snapshot
+
+| Metric | Value |
+|--------|-------|
+| Total Rules Evaluated | 9 |
+| Passed | 6 |
+| Failed | 3 |
+| Overall Score | 66.67% |
+| High-Severity Failures | 2 (Image Registry Compliance, Require Non-Root User) |
+| Operational Labeling Failures | 1 rule (ops-002) failed across multiple resources |
+
+### ❗ Failed Rule Details
+
+| Rule ID | Category | Severity | Description | Current Gap | Remediation Path |
+|---------|----------|----------|-------------|-------------|------------------|
+| comp-001 (Image Registry Compliance) | Compliance | High | Enforce approved registries | `ghcr.io` not whitelisted or policy missing entry | Add `ghcr.io` to allowed list OR mirror images to approved internal registry |
+| sec-003 (Require Non-Root User) | Security | High | Containers must run as non-root | No explicit `securityContext.runAsNonRoot: true` | Patch Helm values / add Pod template overrides |
+| ops-002 (Operational Labels) | Operations | Medium | Standard labeling (team, owner, env) | Missing or incomplete labels on controller & runner pods | Add standardized labels in Helm `values.yaml` |
+
+### 🧪 Controller Log Insights (Highlights)
+
+```
+Runner lifecycle transitions observed → Pending → Preparing → Running
+Scaling comparisons stable (no surge events)
+No repeated auth or version mismatch errors (post-Helm pivot success validated)
+```
+
+### 🛠️ Remediation Plan (Prioritized)
+
+1. Security Baseline (High Severity)
+   - Add `securityContext`: `runAsNonRoot: true`, specify non-root UID (e.g., 1001) in runner and controller pods.
+   - Lock image tags (avoid `:latest`; pin `gha-runner-scale-set-controller:0.12.1`, runner image to a digest or version).
+2. Registry Compliance
+   - Option A: Update policy to include `ghcr.io` (controlled allowance).
+   - Option B: Mirror images to internal registry and adjust Helm values.
+3. Operational Label Hygiene
+   - Add labels: `app=arc-runner`, `team=platform`, `owner=devops`, `env=dev` (align with ops-002 expectations).
+4. Policy Mode Transition
+   - Restart MCP server with `READ_ONLY=false` for controlled auto-fix trial.
+5. Continuous Monitoring
+   - Re-run compliance evaluation; record delta (target ≥ 90% score).
+
+### 🔄 Proposed MCP Write-Enabled Session (Example Config Snippet)
+
+```jsonc
+{
+  "k8s-deployment-server": {
+    "command": "docker",
+    "args": [
+      "run", "-i", "--rm",
+      "-v", "${HOME}/.kube:/home/mcp/.kube:ro",
+      "-v", "./policies/dev-policy.json:/app/dev-policy.json:ro",
+      "-e", "POLICY_CONFIG_PATH=/app/dev-policy.json",
+      "-e", "READ_ONLY=false",
+      "ghcr.io/tsviz/k8s-mcp:v1.4"
+    ],
+    "type": "stdio"
+  }
+}
+```
+
+### 🧩 Policy Customization Considerations
+
+Suggested (from MCP analysis):
+```jsonc
+{
+  "rules": {
+    "comp-001": { "enforcement": "strict" },
+    "sec-003": { "enforcement": "strict" },
+    "ops-002": { "enforcement": "advisory" }
+  }
+}
+```
+Rationale: Maintain hard guardrails on security/compliance; soften operational labels temporarily to enable phased adoption.
+
+### ⚙️ Helm Patch Examples (Illustrative)
+
+```yaml
+# values.override.yaml (runner scale set)
+template:
+  spec:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+    metadata:
+      labels:
+        app: arc-repo-runners
+        team: platform
+        owner: devops
+        env: dev
+controllerDeployment:
+  podTemplate:
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 1001
+    labels:
+      app: arc-controller
+      team: platform
+      owner: devops
+      env: dev
+```
+
+### 📈 Expected Post-Remediation Gains
+
+| Dimension | Current | Target | Benefit |
+|-----------|---------|--------|---------|
+| Compliance Score | 66.67% | ≥ 90% | Reduced audit risk |
+| High-Severity Failures | 2 | 0 | Stronger security baseline |
+| Label Coverage | Partial | 100% standardized | Improved ops automation |
+
+### 🧠 Lessons Learned (Delta vs Case Study 1)
+
+| Theme | Initial Troubleshooting Focus | Continuous Improvement Focus |
+|-------|-------------------------------|------------------------------|
+| Goal | Functionality (make runners work) | Governance + security posture |
+| Logs | Detect auth/version issues | Confirm lifecycle stability |
+| Policies | Not involved initially | Central artifact driving change |
+| Mode | Reactive fixes | Proactive posture management |
+| AI Value | Accelerated root cause isolation | Structured remediation planning |
+
+### 🛡️ Why MCP Was Critical (This Phase)
+
+- Unified posture + operations insight (no external dashboards needed).
+- Safe read-only probing before enabling mutating operations.
+- Machine-generated policy customization scaffolding.
+- Repeatable, audit-friendly workflow embedded in development context.
+
+### 🔮 Next Strategic Steps
+
+1. Enable write mode & apply auto-fixes where safe.
+2. Introduce image digests & admission policy alignment.
+3. Add resource requests/limits for controller & runners (prevent noisy-neighbor risk).
+4. Add metrics pipeline (Prometheus / OpenTelemetry) for scaling efficiency KPIs.
+5. Extend policy set (e.g., network egress restrictions, disallow privileged escalation).
+
+### 🗂️ Conversation Trace (Condensed)
+
+```
+✔ list namespaces → ✔ list deployments → ✔ controller logs → ✔ policy evaluation → ✔ compliance report
+→ ✔ list security rules → ✖ auto-fix (blocked by READ_ONLY) → ✔ policy suggestion → ✔ list namespaces/deployments (cluster-wide inventory)
+```
+
+### 📚 Reference Artifacts
+
+- Policy Rule IDs: `comp-001`, `sec-001`, `sec-002`, `sec-003`, `ops-002` (focus failures: comp-001, sec-003, ops-002)
+- ARC Components: `arc-gha-rs-controller`, `arc-repo-runners-*` listener & ephemeral pods
+- MCP Server Image: `ghcr.io/tsviz/k8s-mcp:v1.4`
+
+### ✅ Outcome
+
+A precise, audit-ready remediation roadmap was produced in minutes—without ad hoc scripting or external dashboards—showcasing how MCP shifts Kubernetes operations from reactive firefighting to structured, AI-assisted governance.
+
+---
+
+*Case Study 2 Date: September 28, 2025*  
+*Compliance Baseline Captured: 66.67%*  
+*Next Target: ≥ 90% Post Hardening*
