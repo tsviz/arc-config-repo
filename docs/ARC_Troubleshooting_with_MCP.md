@@ -9,6 +9,8 @@ This document now contains two complementary case studies that illustrate an evo
 | 1 | First-contact troubleshooting | Functional recovery & speed | Runners operational with 75% faster MTTR |
 | 2 | Post-recovery posture management | Compliance, security, governance | Baseline compliance (66.67%) + hardening roadmap |
 
+> **📚 Continuation Education**: After completing the troubleshooting scenarios in this document, proceed to [`ARC_Runner_Maintenance_with_MCP.md`](./ARC_Runner_Maintenance_with_MCP.md) for comprehensive **operational maintenance playbooks**. That guide focuses on ongoing security hardening, efficiency optimization, policy enforcement, and automated maintenance workflows—transforming your ARC deployment from "working" to "production-ready" and "continuously compliant."
+
 ### Why Two Case Studies?
 1. Show progression: from reactive debugging → proactive governance.
 2. Demonstrate breadth of the MCP server: lifecycle support (setup, diagnosis, compliance, optimization).

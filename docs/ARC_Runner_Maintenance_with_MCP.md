@@ -56,7 +56,7 @@ Rather than one-off troubleshooting, this document establishes **repeatable play
 
 ---
 ## Profile Recap (Configuration Reuse)
-Instead of duplicating container definitions, reuse **MCP Configuration Profiles** from `ARC_Troubleshooting_with_MCP.md`:
+Instead of duplicating container definitions, reuse **MCP Configuration Profiles** from [`ARC_Troubleshooting_with_MCP.md`](./ARC_Troubleshooting_with_MCP.md#mcp-configuration-profiles):
 - Profile 1: Discovery (read-only) – inventory & baseline metrics
 - Profile 2: Policy-Enforced (read-only) – compliance checking
 - Profile 3: Write-Enabled – controlled remediation & rollout
@@ -279,4 +279,4 @@ Adopt an iterative loop: **Baseline → Evaluate → Remediate → Verify → Do
 
 ---
 *Guide Version: 1.0.0*  
-*Last Updated: <REPLACE_DATE>*
+*Last Updated: 2025-09-28*
