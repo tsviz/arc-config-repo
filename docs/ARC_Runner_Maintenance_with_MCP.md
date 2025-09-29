@@ -1,29 +1,38 @@
 # ARC Runner Operational Maintenance with k8s-mcp Server
 
 ## Overview
-This guide complements `ARC_Troubleshooting_with_MCP.md` by focusing on **ongoing operations**: security hardening, efficiency tuning, observability, policy compliance, and automated maintenance of GitHub Actions runners (ARC) using the **k8s-mcp server + GitHub Copilot**.
+This guide complements [`ARC_Troubleshooting_with_MCP.md`](./ARC_Troubleshooting_with_MCP.md) by focusing on **ongoing operations**: security hardening, efficiency tuning, observability, policy compliance, and automated maintenance of GitHub Actions runners (ARC) using the **k8s-mcp server + GitHub Copilot**.
 
 Rather than one-off troubleshooting, this document establishes **repeatable playbooks** you can execute conversationally through MCP-integrated AI.
 
 ---
 ## Table of Contents
-- [Foundations & Assumptions](#foundations--assumptions)
-- [Operational Objectives](#operational-objectives)
-- [Profile Recap (Configuration Reuse)](#profile-recap-configuration-reuse)
-- [Security Hardening Lifecycle](#security-hardening-lifecycle)
-- [Efficiency & Scaling Optimization](#efficiency--scaling-optimization)
-- [Observability & Telemetry](#observability--telemetry)
-- [Policy & Compliance Framework](#policy--compliance-framework)
-- [Runner Job Tracking & Correlation](#runner-job-tracking--correlation)
-- [Caching & Performance Patterns](#caching--performance-patterns)
-- [Cost Control Strategies](#cost-control-strategies)
-- [Automation Playbooks (AI-Driven)](#automation-playbooks-ai-driven)
-- [Maintenance Schedule (Daily / Weekly / Monthly)](#maintenance-schedule-daily--weekly--monthly)
-- [Helm Overrides Reference](#helm-overrides-reference)
-- [Policy JSON Scaffold](#policy-json-scaffold)
-- [Risk Matrix (Pre vs Post Hardening)](#risk-matrix-pre-vs-post-hardening)
-- [KPIs & ROI Tracking](#kpis--roi-tracking)
-- [Appendix: Sample AI Prompts](#appendix-sample-ai-prompts)
+- [ARC Runner Operational Maintenance with k8s-mcp Server](#arc-runner-operational-maintenance-with-k8s-mcp-server)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [Foundations \& Assumptions](#foundations--assumptions)
+  - [Operational Objectives](#operational-objectives)
+  - [Profile Recap (Configuration Reuse)](#profile-recap-configuration-reuse)
+  - [Security Hardening Lifecycle](#security-hardening-lifecycle)
+    - [Recommended SecurityContext (Runner Pod)](#recommended-securitycontext-runner-pod)
+    - [PAT Token Rotation Playbook](#pat-token-rotation-playbook)
+  - [Efficiency \& Scaling Optimization](#efficiency--scaling-optimization)
+    - [Scaling Review Prompt](#scaling-review-prompt)
+  - [Observability \& Telemetry](#observability--telemetry)
+  - [Policy \& Compliance Framework](#policy--compliance-framework)
+    - [Drift Detection Prompt](#drift-detection-prompt)
+  - [Runner Job Tracking \& Correlation](#runner-job-tracking--correlation)
+    - [AI Prompt](#ai-prompt)
+  - [Caching \& Performance Patterns](#caching--performance-patterns)
+  - [Cost Control Strategies](#cost-control-strategies)
+  - [Automation Playbooks (AI-Driven)](#automation-playbooks-ai-driven)
+  - [Maintenance Schedule (Daily / Weekly / Monthly)](#maintenance-schedule-daily--weekly--monthly)
+  - [Helm Overrides Reference](#helm-overrides-reference)
+  - [Policy JSON Scaffold](#policy-json-scaffold)
+  - [Risk Matrix (Pre vs Post Hardening)](#risk-matrix-pre-vs-post-hardening)
+  - [KPIs \& ROI Tracking](#kpis--roi-tracking)
+  - [Appendix: Sample AI Prompts](#appendix-sample-ai-prompts)
+  - [Closing Summary](#closing-summary)
 
 ---
 ## Foundations & Assumptions
